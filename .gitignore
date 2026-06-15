@@ -1,3 +1,7 @@
+__pycache__/
+*.py[cod]
 .ipynb_checkpoints/
-_pycache_/
 .env
+cleaned_output.csv
+report.json
+_test_generic.csv

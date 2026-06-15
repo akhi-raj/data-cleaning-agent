@@ -1,72 +1,106 @@
 # Data Cleaning Agent
 
-An autonomous, modular data cleaning pipeline for structured CSV datasets. Built and tested on the Adult Income dataset.
+A schema-agnostic, modular data cleaning pipeline for structured CSV datasets. The pipeline profiles each column automatically and applies type coercion, imputation, outlier flagging, deduplication, and validation without hard-coded column names.
 
-Features
+## Features
 
+- **Auto-profiling** — infers numeric, categorical, and boolean columns from data
+- **Smart loading** — auto-detects headers, skips malformed leading rows, handles common missing markers (`?`, `NA`, `null`, etc.)
+- **Type coercion** — converts columns to appropriate types and normalizes categorical text
+- **Missing value handling** — median for numerics, mode for low-cardinality categoricals, `"unknown"` for high-cardinality
+- **Outlier detection** — IQR-based flags (does not remove rows); skips ID-like and zero-inflated columns
+- **Deduplication** — removes duplicate rows on non-ID columns
+- **Optional config** — override auto-detected behavior per dataset
 
-Type coercion — converts columns to the correct numeric or categorical types
-Missing value handling — fills numeric columns with the median and categorical columns with the mode
-Outlier detection — flags outliers using the IQR method (adds flag columns, does not remove rows)
-Deduplication — removes exact duplicate rows
-Schema validation — asserts expected columns and types are present after cleaning
+## Project Structure
 
-
-Project Structure
-
+```
 data-cleaning-agent/
 ├── agent/
-│   ├── 01_loader.py
-│   ├── 02_type_coercion.py
-│   ├── 03_missing_values.py
-│   ├── 04_outliers.py
-│   ├── 05_deduplication.py
-│   ├── 06_validation.py
-│   └── 07_pipeline.py
-├── notebooks/
-│   ├── 01_data_profiling.ipynb
-│   ├── 02_type_coercion.ipynb
-│   ├── 03_missing_value_handling.ipynb
-│   ├── 04_outlier_detection.ipynb
-│   ├── 05_deduplication.ipynb
-│   └── 06_validation.ipynb
+│   ├── config.py          # Pipeline configuration
+│   ├── profiler.py        # Column profiling and strategy selection
+│   ├── loader.py          # CSV loading with auto-detection
+│   ├── type_coercion.py
+│   ├── missing_values.py
+│   ├── outliers.py
+│   ├── deduplication.py
+│   ├── validation.py
+│   └── pipeline.py
+├── examples/
+│   └── adult_config.json  # Optional config for UCI Adult dataset
+├── notebooks/             # Exploratory notebooks (original profiling work)
 ├── dataset/
 ├── run_agent.py
-├── requirement.txt
+├── requirements.txt
 └── README.md
+```
 
-Setup
+## Setup
 
-bash# 1. Clone the repo
-git clone https://github.com/akhi-raj/data-cleaning-agent.git
-cd data-cleaning-agent
-
-# 2. Create a virtual environment (recommended)
+```bash
 python -m venv venv
-source venv/bin/activate      # On Windows: venv\Scripts\activate
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 
-# 3. Install dependencies
-pip install -r requirement.txt
+pip install -r requirements.txt
+```
 
-Usage
+## Usage
 
-bashpython run_agent.py <path_to_your_dataset.csv>
+Basic (fully automatic):
 
-Example:
+```bash
+python run_agent.py path/to/data.csv
+```
 
-bashpython run_agent.py ./dataset/adult.csv
+With output path and cleaning report:
 
-Output
+```bash
+python run_agent.py path/to/data.csv -o cleaned.csv --report report.json
+```
 
-The cleaned dataset is saved as cleaned_output.csv in the project root.
+With optional JSON config:
 
-Outlier columns are added as boolean flags (e.g., age_outlier) rather than removed, so you retain full control over how to handle them.
+```bash
+python run_agent.py path/to/data.csv -c examples/adult_config.json
+```
 
-Notes
+Force header behavior:
 
+```bash
+python run_agent.py data.csv --no-header
+python run_agent.py data.csv --header
+```
 
-This pipeline is schema-specific. It is designed for the Adult Income dataset column structure. Running it on a different dataset without modifying the agent modules will likely cause errors or produce incorrect results.
+### Config options
 
+| Key | Description |
+|-----|-------------|
+| `has_header` | `true` / `false` / omit for auto-detect |
+| `column_names` | List of names when CSV has no header |
+| `na_values` | Missing value tokens (default: `?`, `NA`, `N/A`, `null`, etc.) |
+| `skiprows` | Number of leading rows to skip (omit for auto-detect) |
+| `impute_overrides` | Per-column imputation: `median`, `mode`, `unknown`, `skip` |
+| `skip_impute_columns` | Columns to leave unchanged |
+| `skip_outlier_columns` | Numeric columns to exclude from IQR flagging |
+| `outlier_columns` | Explicit list of columns to flag (overrides auto) |
+| `dedup_subset` | Explicit dedup key columns |
+| `skip_dedup_columns` | Columns excluded from dedup key |
 
+## Example: UCI Adult dataset
 
-The notebooks/ folder contains step-by-step Jupyter notebooks for each cleaning stage, useful for understanding or debugging individual steps.
+```bash
+python run_agent.py ./dataset/nyc.test -c examples/adult_config.json -o cleaned_output.csv
+```
+
+## Output
+
+- Cleaned CSV at the path given by `-o` (default: `cleaned_output.csv`)
+- Optional JSON report with row/column counts and per-column profiles
+
+Outlier columns are added as boolean flags (e.g. `age_outlier`) rather than removing rows.
+
+## Notes
+
+- Works on any well-formed CSV; optional config fine-tunes behavior for known schemas.
+- The `notebooks/` folder contains the original Adult-dataset profiling that informed default heuristics.
