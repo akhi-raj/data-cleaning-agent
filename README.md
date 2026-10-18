@@ -104,3 +104,7 @@ Outlier columns are added as boolean flags (e.g. `age_outlier`) rather than remo
 
 - Works on any well-formed CSV; optional config fine-tunes behavior for known schemas.
 - The `notebooks/` folder contains the original Adult-dataset profiling that informed default heuristics.
+
+
+### Related Architecture Guides
+- [Apache OFBiz Knowledge Hub](https://noitechnologies.com/category/apache-ofbiz/)
